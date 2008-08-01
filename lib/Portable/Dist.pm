@@ -12,7 +12,20 @@ The L<Portable> family of modules provides functionality that allows
 Perl to operate from arbitrary and variable paths.
 
 B<Portable::Dist> is used to apply the necesary modifications to an
-existing Perl distribution.
+existing Perl distribution to convert it to a Portable Perl.
+
+=head2 Portability Warning
+
+This module is designed for use only on a distribution that is not
+currently in use. Thus, you should not execute the modification
+process using the distribution you wish to modify.
+
+This module is also currently only designed to run on Windows (to
+support the production of Strawberry Perl Portable and other
+Perl::Dist-related distributions).
+
+If you wish to use this module for other operating systems, please
+contact the author.
 
 =head1 METHODS
 
@@ -20,4 +33,297 @@ existing Perl distribution.
 
 use 5.008;
 use strict;
-use 
+use Carp                ();
+use Tie::Slurp          ();
+use File::Spec          ();
+use File::Path          ();
+use File::Slurp         'write_file';
+use Params::Util        '_STRING'; 
+use File::Find::Rule    ();
+use Win32::File::Object ();
+
+use Object::Tiny qw{
+	perl_root
+	perl_bin
+	perl_lib
+	perl_sitelib
+	pl2bat
+	config_pm
+	cpan_config
+	file_homedir
+	minicpan_dir
+	minicpan_conf
+};
+
+
+
+
+
+
+#####################################################################
+# Constructor and Accessors
+
+sub new {
+	my $self = shift->SUPER::new(@_);
+
+	# Check params
+	unless ( _DIRECTORY($self->perl_root) ) {
+		Carp::croak("Missing or invalid perl_root directory");
+	}
+
+	$self->{perl_bin} ||= File::Spec->catdir( $self->perl_root, 'bin' );
+	unless ( _DIRECTORY($self->perl_bin) ) {
+		Carp::croak("Missing or invalid perl_bin directory");
+	}
+
+	$self->{perl_lib} ||= File::Spec->catdir( $self->perl_root, 'lib' );
+	unless ( _DIRECTORY($self->perl_lib) ) {
+		Carp::croak("Missing or invalid perl_lib directory");
+	}
+
+	$self->{perl_sitelib} ||= File::Spec->catdir( $self->perl_root, 'site', 'lib' );
+	unless ( _DIRECTORY($self->perl_sitelib) ) {
+		Carp::croak("Missing or invalid perl_sitelib directory");
+	}
+
+	# Find some particular files
+	$self->{pl2bat}        = File::Spec->catfile( $self->perl_bin,     'pl2bat.bat'         );
+	$self->{config_pm}     = File::Spec->catfile( $self->perl_lib,     'Config.pm'          );
+	$self->{cpan_config}   = File::Spec->catfile( $self->perl_lib,     'CPAN', 'Config.pm'  );
+	$self->{file_homedir}  = File::Spec->catfile( $self->perl_sitelib, 'File', 'HomeDir.pm' );
+	$self->{minicpan_dir}  = File::Spec->catfile( $self->perl_sitelib, 'CPAN'               );
+	$self->{minicpan_conf} = File::Spec->catfile( $self->minicpan_dir, 'minicpan.conf'      );
+
+	return $self;
+}
+
+sub run {
+	my $self = shift;
+
+	# Modify the files we need to hack
+	$self->modify_config;
+	$self->modify_cpan_config;
+	$self->modify_file_homedir;
+
+	# Create the minicpan configuration file
+	$self->create_minicpan_conf;
+
+	# Convert all existing batch files to portable
+	$self->modify_batch_files;
+
+	# Modify pl2bat so new batch files get created properly
+	$self->modify_pl2bat;
+
+	return 1;
+}
+
+
+
+
+
+#####################################################################
+# Modification Functions
+
+# Apply modifications to Config.pm
+sub modify_config {
+	my $self   = shift;
+	my $file   = $self->config_pm;
+	my $handle = Win32::File::Object->new( $file, 1 );
+	my $append = <<'END_PERL';
+eval {
+	require Portable;
+	Portable->import('Config');
+};
+
+1;
+END_PERL
+
+	# Strip readonly protection if needed
+	my $readonly = $handle->readonly;
+	$handle->readonly(0) if $readonly;
+
+	# Apply the change to the file
+	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+	$content .= $append;
+	untie $content;
+
+	# Restore readonly protection if needed
+	$handle->readonly(1) if $readonly;
+
+	return 1;	
+}
+
+# Apply modifications to CPAN::Config
+sub modify_cpan_config {
+	my $self   = shift;
+	my $file   = $self->cpan_config;
+	my $handle = Win32::File::Object->new( $file, 1 );
+	my $append = <<'END_PERL';
+eval {
+	require Portable;
+	Portable->import('CPAN');
+};
+END_PERL
+
+	# Strip readonly protection if needed
+	my $readonly = $handle->readonly;
+	$handle->readonly(0) if $readonly;
+
+	# Apply the change to the file
+	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+	$content =~ s/\n1;/$append\n\n1;/;
+	untie $content;
+
+	# Restore readonly protection if needed
+	$handle->readonly(1) if $readonly;
+
+	return 1;
+}
+
+# Apply modifications to File::HomeDir
+sub modify_file_homedir {
+	my $self   = shift;
+	my $file   = $self->file_homedir;
+	my $handle = Win32::File::Object->new( $file, 1 );
+	my $append = <<'END_PERL';
+eval {
+	require Portable;
+	Portable->import('HomeDir');
+};
+END_PERL
+
+	# Strip readonly protection if needed
+	my $readonly = $handle->readonly;
+	$handle->readonly(0) if $readonly;
+
+	# Apply the change to the file
+	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+	$content =~ s/\n1;/$append\n\n1;/;
+	untie $content;
+
+	# Restore readonly protection if needed
+	$handle->readonly(1) if $readonly;
+
+	return 1;
+}
+
+# Create the minicpan configuration file
+sub create_minicpan_conf {
+	my $self = shift;
+	my $dir  = $self->minicpan_dir;
+	my $file = $self->minicpan_conf;
+
+	# Create the directory
+	File::Path::mkpath( $dir, { verbose => 0 } );
+
+	# Write the file
+	File::Slurp::write_file(
+		$file,
+		"class: CPAN::Mini::Portable\n",
+		"skip_perl: 1\n",
+	);
+
+	# Make the file readonly
+	Win32::File::Object->new( $file, 1 )->readonly(1);
+
+	return 1;
+}
+
+# Modify existing batch files
+sub modify_batch_files {
+	my $self  = shift;
+	my $dir   = $self->perl_bin;
+	my @files = File::Find::Rule->name('*.bat')->file->in( $dir );
+	unless ( @files ) {
+		Carp::croak("Failed to find any batch files");
+	}
+
+	# Process the files
+	my $prepend = 'FOR %%I IN ( %0 ) DO %%~dI%%~pIperl.exe';
+	foreach my $file ( @files ) {
+		# Strip readonly protection if needed
+		my $handle   = Win32::File::Object->new( $file, 1 );
+		my $readonly = $handle->readonly;
+		$handle->readonly(0) if $readonly;
+
+		# Apply the change to the file
+		tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+		$content =~ s/\nperl -x/\n${prepend} -x/g;
+		untie $content;
+
+		# Restore readonly protection if needed
+		$handle->readonly(1) if $readonly;
+	}
+
+	return 1;
+}
+
+sub modify_pl2bat {
+	my $self   = shift;
+	my $file   = $self->pl2bat;
+	my $handle = Win32::File::Object->new( $file, 1 );
+	my $append = <<'END_PERL';
+eval {
+	require Portable;
+	Portable->import('HomeDir');
+};
+END_PERL
+
+	# Strip readonly protection if needed
+	my $readonly = $handle->readonly;
+	$handle->readonly(0) if $readonly;
+
+	# Apply the change to the file
+	my $prepend = 'FOR %%I IN ( %0 ) DO %%~dI%%~pIperl.exe';
+	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+	$content =~ s/\bperl \$/${prepend} \$/g;
+	untie $content;
+
+	# Restore readonly protection if needed
+	$handle->readonly(1) if $readonly;
+
+	return 1;
+}
+
+
+
+
+
+#####################################################################
+# Support Functions
+
+sub _DIRECTORY {
+	(defined _STRING($_[0]) and -d $_[0]) ? $_[0] : undef;
+}
+
+1;
+
+=pod
+
+=head1 SUPPORT
+
+Bugs should be reported via the CPAN bug tracker.
+
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Portable-Dist>
+
+For other issues, or commercial support, contact the author.
+
+=head1 AUTHOR
+
+Adam Kennedy E<lt>adamk@cpan.orgE<gt>
+
+=head1 SEE ALSO
+
+L<Portable>, L<http://win32.perl.org/>
+
+=head1 COPYRIGHT
+
+Copyright 2008 Adam Kennedy.
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=cut
