@@ -47,6 +47,8 @@ BEGIN {
 	$VERSION = '0.01';
 }
 
+use constant WIN32 => ( $^O eq 'MSWin32' );
+
 use Object::Tiny qw{
 	perl_root
 	perl_bin
@@ -208,7 +210,13 @@ sub create_minicpan_conf {
 	);
 
 	# Make the file readonly
-	Win32::File::Object->new( $file, 1 )->readonly(1);
+	if ( WIN32 ) {
+		require Win32::File::Object;
+		Win32::File::Object->new( $file, 1 )->readonly(1);
+	} else {
+		require File::chmod;
+		File::chmod::chmod( 'a-w', $file );
+	}
 
 	return 1;
 }
