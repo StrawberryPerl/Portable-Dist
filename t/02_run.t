@@ -29,7 +29,13 @@ File::Remove::remove( \1,
 # Make sure everything in the copy is readonly
 foreach my $file ( File::Find::Rule->file->in($target) ) {
 	$file = File::Spec->canonpath( $file );
-	Win32::File::Object->new( $file, 1 )->readonly(1);
+	if ( $^O eq 'MSWin32' ) {
+		require Win32::File::Object;
+		Win32::File::Object->new( $file, 1 )->readonly(1);
+	} else {
+		require File::chmod;
+		File::chmod::chmod( 'a-w', $file );
+	}
 	ok(   -r $file, "$file is readable" );
 	ok( ! -w $file, "$file is readonly" );
 }
