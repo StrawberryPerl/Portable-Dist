@@ -6,7 +6,7 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More tests => 36;
+use Test::More tests => 42;
 use Portable::Dist        ();
 use File::Spec::Functions ':ALL';
 use File::Remove          ();
