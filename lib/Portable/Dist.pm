@@ -42,6 +42,11 @@ use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
+use vars qw{$VERSION};
+BEGIN {
+	$VERSION = '0.01';
+}
+
 use Object::Tiny qw{
 	perl_root
 	perl_bin
