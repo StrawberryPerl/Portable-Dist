@@ -13,6 +13,9 @@ use File::Remove          ();
 use File::Copy::Recursive ();
 use File::Find::Rule      ();
 
+# When on Unix, and root, skip some file permissions tests
+use constant ROOT => ! ( $^O eq 'MSWin32' or ($< and $>) );
+
 # Preparation
 my $source = catdir( 't', 'data' );
 ok( -d $source, 'Found source directory' );
@@ -37,7 +40,10 @@ foreach my $file ( File::Find::Rule->file->in($target) ) {
 		File::chmod::chmod( 'a-w', $file );
 	}
 	ok(   -r $file, "$file is readable" );
-	ok( ! -w $file, "$file is readonly" );
+	SKIP: {
+		skip("Skip ! -w tests when root", 1) if ROOT;
+		ok( ! -w $file, "$file is readonly" );
+	}
 }
 
 
@@ -98,5 +104,8 @@ foreach my $method ( qw{
 	minicpan_conf
 } ) {
 	ok(   -r $dist->$method(), "$method is readable" );
-	ok( ! -w $dist->$method(), "$method is readonly" );
+	SKIP: {
+		skip("Skip ! -w tests when root", 1) if ROOT;
+		ok( ! -w $dist->$method(), "$method is readonly" );
+	}
 }
