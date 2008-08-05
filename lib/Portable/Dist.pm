@@ -33,14 +33,14 @@ contact the author.
 
 use 5.008;
 use strict;
-use Carp                ();
-use Tie::Slurp          ();
-use File::Spec          ();
-use File::Path          ();
-use File::Slurp         'write_file';
-use Params::Util        '_STRING'; 
-use File::Find::Rule    ();
-use Win32::File::Object ();
+use Carp                 ();
+use Tie::Slurp           ();
+use File::Spec           ();
+use File::Path           ();
+use File::Slurp          'write_file';
+use File::Find::Rule     ();
+use File::IgnoreReadonly ();
+use Params::Util         '_STRING'; 
 
 use Object::Tiny qw{
 	perl_root
@@ -128,7 +128,6 @@ sub run {
 sub modify_config {
 	my $self   = shift;
 	my $file   = $self->config_pm;
-	my $handle = Win32::File::Object->new( $file, 1 );
 	my $append = <<'END_PERL';
 eval {
 	require Portable;
@@ -138,17 +137,11 @@ eval {
 1;
 END_PERL
 
-	# Strip readonly protection if needed
-	my $readonly = $handle->readonly;
-	$handle->readonly(0) if $readonly;
-
 	# Apply the change to the file
+	my $guard = File::IgnoreReadonly->new( $file );
 	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
 	$content .= $append;
 	untie $content;
-
-	# Restore readonly protection if needed
-	$handle->readonly(1) if $readonly;
 
 	return 1;	
 }
@@ -157,7 +150,6 @@ END_PERL
 sub modify_cpan_config {
 	my $self   = shift;
 	my $file   = $self->cpan_config;
-	my $handle = Win32::File::Object->new( $file, 1 );
 	my $append = <<'END_PERL';
 eval {
 	require Portable;
@@ -165,17 +157,11 @@ eval {
 };
 END_PERL
 
-	# Strip readonly protection if needed
-	my $readonly = $handle->readonly;
-	$handle->readonly(0) if $readonly;
-
 	# Apply the change to the file
+	my $guard = File::IgnoreReadonly->new( $file );
 	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
 	$content =~ s/\n1;/$append\n\n1;/;
 	untie $content;
-
-	# Restore readonly protection if needed
-	$handle->readonly(1) if $readonly;
 
 	return 1;
 }
@@ -184,7 +170,6 @@ END_PERL
 sub modify_file_homedir {
 	my $self   = shift;
 	my $file   = $self->file_homedir;
-	my $handle = Win32::File::Object->new( $file, 1 );
 	my $append = <<'END_PERL';
 eval {
 	require Portable;
@@ -192,17 +177,11 @@ eval {
 };
 END_PERL
 
-	# Strip readonly protection if needed
-	my $readonly = $handle->readonly;
-	$handle->readonly(0) if $readonly;
-
 	# Apply the change to the file
+	my $guard = File::IgnoreReadonly->new( $file );
 	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
 	$content =~ s/\n1;/$append\n\n1;/;
 	untie $content;
-
-	# Restore readonly protection if needed
-	$handle->readonly(1) if $readonly;
 
 	return 1;
 }
@@ -241,46 +220,32 @@ sub modify_batch_files {
 	# Process the files
 	my $prepend = 'FOR %%I IN ( %0 ) DO %%~dI%%~pIperl.exe';
 	foreach my $file ( @files ) {
-		# Strip readonly protection if needed
-		my $handle   = Win32::File::Object->new( $file, 1 );
-		my $readonly = $handle->readonly;
-		$handle->readonly(0) if $readonly;
-
 		# Apply the change to the file
+		my $guard = File::IgnoreReadonly->new( $file );
 		tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
 		$content =~ s/\nperl -x/\n${prepend} -x/g;
 		untie $content;
-
-		# Restore readonly protection if needed
-		$handle->readonly(1) if $readonly;
 	}
 
 	return 1;
 }
 
 sub modify_pl2bat {
-	my $self   = shift;
-	my $file   = $self->pl2bat;
-	my $handle = Win32::File::Object->new( $file, 1 );
-	my $append = <<'END_PERL';
+	my $self    = shift;
+	my $file    = $self->pl2bat;
+	my $prepend = 'FOR %%I IN ( %0 ) DO %%~dI%%~pIperl.exe';
+	my $append  = <<'END_PERL';
 eval {
 	require Portable;
 	Portable->import('HomeDir');
 };
 END_PERL
 
-	# Strip readonly protection if needed
-	my $readonly = $handle->readonly;
-	$handle->readonly(0) if $readonly;
-
 	# Apply the change to the file
-	my $prepend = 'FOR %%I IN ( %0 ) DO %%~dI%%~pIperl.exe';
+	my $guard   = File::IgnoreReadonly->new( $file );
 	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
 	$content =~ s/\bperl \$/${prepend} \$/g;
 	untie $content;
-
-	# Restore readonly protection if needed
-	$handle->readonly(1) if $readonly;
 
 	return 1;
 }

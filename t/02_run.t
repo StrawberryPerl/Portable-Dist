@@ -6,23 +6,29 @@ BEGIN {
 	$^W = 1;
 }
 
-use Test::More tests => 14;
+use Test::More tests => 36;
 use Portable::Dist        ();
 use File::Spec::Functions ':ALL';
-use File::Remove          'clear';
-use File::Copy::Recursive 'dircopy';
+use File::Remove          ();
+use File::Copy::Recursive ();
 use File::Find::Rule      ();
 
 # Preparation
 my $source = catdir( 't', 'data' );
 ok( -d $source, 'Found source directory' );
 my $target = catdir( 't', 'perl' );
-clear( $target );
-dircopy( $source => $target );
-ok( -d $target, 'Target directory does not exist' );
+File::Remove::clear( $target );
+File::Copy::Recursive::dircopy( $source => $target );
+ok( -d $target, 'Target directory exists' );
+
+# If we are running in an SVN repository, remove the excess files
+File::Remove::remove( \1,
+	File::Find::Rule->name('.svn')->directory->in( $target )
+) if -e '.svn';
 
 # Make sure everything in the copy is readonly
 foreach my $file ( File::Find::Rule->file->in($target) ) {
+	$file = File::Spec->canonpath( $file );
 	Win32::File::Object->new( $file, 1 )->readonly(1);
 	ok(   -r $file, "$file is readable" );
 	ok( ! -w $file, "$file is readonly" );
