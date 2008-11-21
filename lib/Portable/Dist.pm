@@ -231,7 +231,7 @@ sub modify_batch_files {
 	}
 
 	# Process the files
-	my $prepend = '%~dp0perl.exe';
+	my $prepend = '"%~dp0perl.exe"';
 	foreach my $file ( @files ) {
 		# Apply the change to the file
 		my $guard = File::IgnoreReadonly->new( $file );
@@ -246,7 +246,7 @@ sub modify_batch_files {
 sub modify_pl2bat {
 	my $self    = shift;
 	my $file    = $self->pl2bat;
-	my $prepend = '%~dp0perl.exe';
+	my $prepend = '"%~dp0perl.exe"';
 	my $append  = <<'END_PERL';
 eval {
 	require Portable;
