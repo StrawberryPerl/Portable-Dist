@@ -1,5 +1,8 @@
 Changes for Perl extension Portable-Dist
 
+0.03 Mon  9 Feb 2009
+	- Adding quotes around the "%~dp0perl.exe"
+
 0.02 Tue  5 Aug 2008
 	- Apply suggestions from snaury on use.perl to improve variables
 	- Adding tests that actually verify that the batch files work
