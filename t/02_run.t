@@ -103,7 +103,7 @@ foreach my $method ( qw{
 	file_homedir
 	minicpan_conf
 } ) {
-	ok(   -r $dist->$method(), "$method is readable" );
+	ok( -r $dist->$method(), "$method is readable" );
 	SKIP: {
 		skip("Skip ! -w tests when root", 1) if ROOT;
 		ok( ! -w $dist->$method(), "$method is readonly" );

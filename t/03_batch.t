@@ -12,7 +12,7 @@ BEGIN {
 use Test::More;
 BEGIN {
 	if ( $^O eq 'MSWin32' ) {
-		plan( tests    => 3 );
+		plan( tests => 3 );
 	} else {
 		plan( skip_all => 'Tests only runnable on Win32' );
 		exit(0);
