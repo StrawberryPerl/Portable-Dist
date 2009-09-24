@@ -42,7 +42,7 @@ use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use constant MSWin32 => ( $^O eq 'MSWin32' );
 
@@ -51,10 +51,12 @@ use Object::Tiny qw{
 	perl_bin
 	perl_lib
 	perl_sitelib
+	perl_vendorlib
 	pl2bat
 	config_pm
 	cpan_config
 	file_homedir
+	file_homedir_v
 	minicpan_dir
 	minicpan_conf
 };
@@ -89,13 +91,19 @@ sub new {
 		Carp::croak("Missing or invalid perl_sitelib directory");
 	}
 
+	$self->{perl_vendorlib} ||= File::Spec->catdir( $self->perl_root, 'vendor', 'lib' );
+	unless ( _DIRECTORY($self->perl_sitelib) ) {
+		Carp::croak("Missing or invalid perl_vendorlib directory");
+	}
+
 	# Find some particular files
-	$self->{pl2bat}        = File::Spec->catfile( $self->perl_bin,     'pl2bat.bat'         );
-	$self->{config_pm}     = File::Spec->catfile( $self->perl_lib,     'Config.pm'          );
-	$self->{cpan_config}   = File::Spec->catfile( $self->perl_lib,     'CPAN', 'Config.pm'  );
-	$self->{file_homedir}  = File::Spec->catfile( $self->perl_sitelib, 'File', 'HomeDir.pm' );
-	$self->{minicpan_dir}  = File::Spec->catfile( $self->perl_sitelib, 'CPAN'               );
-	$self->{minicpan_conf} = File::Spec->catfile( $self->minicpan_dir, 'minicpan.conf'      );
+	$self->{pl2bat}          = File::Spec->catfile( $self->perl_bin,       'pl2bat.bat'         );
+	$self->{config_pm}       = File::Spec->catfile( $self->perl_lib,       'Config.pm'          );
+	$self->{cpan_config}     = File::Spec->catfile( $self->perl_lib,       'CPAN', 'Config.pm'  );
+	$self->{file_homedir}    = File::Spec->catfile( $self->perl_sitelib,   'File', 'HomeDir.pm' );
+	$self->{file_homedir_v}  = File::Spec->catfile( $self->perl_vendorlib, 'File', 'HomeDir.pm' );
+	$self->{minicpan_dir}    = File::Spec->catfile( $self->perl_sitelib,   'CPAN'               );
+	$self->{minicpan_conf}   = File::Spec->catfile( $self->minicpan_dir,   'minicpan.conf'      );
 
 	return $self;
 }
@@ -172,13 +180,19 @@ END_PERL
 # Apply modifications to File::HomeDir
 sub modify_file_homedir {
 	my $self   = shift;
-	my $file   = $self->file_homedir;
+	my $file;
 	my $append = <<'END_PERL';
 eval {
 	require Portable;
 	Portable->import('HomeDir');
 };
 END_PERL
+
+	if (-f $self->file_homedir_v) {
+		$file = $self->file_homedir_v;
+	} else {
+		$file = $self->file_homedir;
+	}
 
 	# Apply the change to the file
 	my $guard = File::IgnoreReadonly->new( $file );
