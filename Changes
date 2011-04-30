@@ -1,5 +1,7 @@
 Changes for Perl extension Portable-Dist
 
+        - Support for vendor directories (CSJEWELL)
+
 0.03 Mon  9 Feb 2009
 	- Adding quotes around the "%~dp0perl.exe"
 
