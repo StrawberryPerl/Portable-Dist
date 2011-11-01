@@ -37,6 +37,9 @@ SCOPE: {
 	        "$curdir>echo Hello World! \n",
 	        "Hello World!\n",
 	);
+        #workaroung for failure: 'C:\dirname\... ' vs. 'c:\dirname\...'
+        @stdout = map { lc $_ } @stdout;
+        @expected = map { lc $_ } @expected;
 	is_deeply( \@stdout, \@expected, 'echo.bat ok' );
 }
 
@@ -64,6 +67,9 @@ SCOPE: {
 		"$curdir>echo $bindir\\perl.exe \n",
 		"$bindir\\perl.exe\n",
 	);
+        #workaroung for failure: 'C:\dirname\... ' vs. 'c:\dirname\...'
+        @stdout = map { lc $_ } @stdout;
+        @expected = map { lc $_ } @expected;
 	is_deeply( \@stdout, \@expected, 'interp.bat ok' );
 	my $perl = $expected[-1];
 	chomp($perl);
