@@ -1,7 +1,6 @@
-use inc::Module::Install 0.76;
+use inc::Module::Install 1.04;
 
 all_from       'lib/Portable/Dist.pm';
-requires       'Carp';
 requires       'File::Spec'            => winlike() ? '3.2701' : '0.80';
 requires       'File::Slurp'           => '9999.13';
 requires       'Tie::Slurp'            => '0.03';

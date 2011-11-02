@@ -42,7 +42,7 @@ use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
-our $VERSION = '0.04';
+our $VERSION = '1.04';
 
 use constant MSWin32 => ( $^O eq 'MSWin32' );
 
