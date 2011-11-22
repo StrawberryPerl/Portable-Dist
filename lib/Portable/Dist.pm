@@ -102,7 +102,7 @@ sub new {
 	$self->{cpan_config}     = File::Spec->catfile( $self->perl_lib,       'CPAN', 'Config.pm'  );
 	$self->{file_homedir}    = File::Spec->catfile( $self->perl_sitelib,   'File', 'HomeDir.pm' );
 	$self->{file_homedir_v}  = File::Spec->catfile( $self->perl_vendorlib, 'File', 'HomeDir.pm' );
-	$self->{minicpan_dir}    = File::Spec->catfile( $self->perl_sitelib,   'CPAN'               );
+	$self->{minicpan_dir}    = File::Spec->catfile( $self->perl_vendorlib, 'CPAN'               );
 	$self->{minicpan_conf}   = File::Spec->catfile( $self->minicpan_dir,   'minicpan.conf'      );
 
 	return $self;
