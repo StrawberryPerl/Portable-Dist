@@ -3,7 +3,6 @@ use inc::Module::Install 1.04;
 all_from       'lib/Portable/Dist.pm';
 requires       'File::Spec'            => winlike() ? '3.2701' : '0.80';
 requires       'File::Slurp'           => '9999.13';
-requires       'Tie::Slurp'            => '0.03';
 requires       'Object::Tiny'          => '1.04';
 requires       'Params::Util'          => '0.31';
 requires       'File::Find::Rule'      => '0.30';

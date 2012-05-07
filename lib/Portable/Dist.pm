@@ -34,15 +34,14 @@ contact the author.
 use 5.008;
 use strict;
 use Carp                 ();
-use Tie::Slurp           ();
 use File::Spec           ();
 use File::Path           ();
-use File::Slurp          ();
+use File::Slurp          qw(read_file write_file);
 use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
-our $VERSION = '1.04';
+our $VERSION = '1.05';
 
 use constant MSWin32 => ( $^O eq 'MSWin32' );
 
@@ -150,9 +149,9 @@ END_PERL
 
 	# Apply the change to the file
 	my $guard = File::IgnoreReadonly->new( $file );
-	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+	my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
 	$content .= $append;
-	untie $content;
+	write_file($file, {binmode=>':utf8'}, $content);
 
 	return 1;	
 }
@@ -170,9 +169,9 @@ END_PERL
 
 	# Apply the change to the file
 	my $guard = File::IgnoreReadonly->new( $file );
-	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+        my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
 	$content =~ s/\n1;/$append\n\n1;/;
-	untie $content;
+	write_file($file, {binmode=>':utf8'}, $content);
 
 	return 1;
 }
@@ -196,9 +195,9 @@ END_PERL
 
 	# Apply the change to the file
 	my $guard = File::IgnoreReadonly->new( $file );
-	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+        my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
 	$content =~ s/\n1;/$append\n\n1;/;
-	untie $content;
+	write_file($file, {binmode=>':utf8'}, $content);
 
 	return 1;
 }
@@ -213,7 +212,7 @@ sub create_minicpan_conf {
 	File::Path::mkpath( $dir, { verbose => 0 } );
 
 	# Write the file
-	File::Slurp::write_file(
+	write_file(
 		$file,
 		"class: CPAN::Mini::Portable\n",
 		"skip_perl: 1\n",
@@ -246,9 +245,9 @@ sub modify_batch_files {
 	foreach my $file ( @files ) {
 		# Apply the change to the file
 		my $guard = File::IgnoreReadonly->new( $file );
-		tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+                my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
 		$content =~ s/\nperl -x/\n${prepend} -x/g;
-		untie $content;
+		write_file($file, {binmode=>':utf8'}, $content);
 	}
 
 	return 1;
@@ -267,9 +266,9 @@ END_PERL
 
 	# Apply the change to the file
 	my $guard   = File::IgnoreReadonly->new( $file );
-	tie my $content, 'Tie::Slurp', $file or die "Couldn't read $file";
+        my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
 	$content =~ s/\bperl \$/${prepend} \$/g;
-	untie $content;
+	write_file($file, {binmode=>':utf8'}, $content);
 
 	return 1;
 }

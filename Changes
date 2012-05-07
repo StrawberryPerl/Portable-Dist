@@ -1,10 +1,14 @@
 Changes for Perl extension Portable-Dist
 
+1.05 Mon 7 May 2015
+	- removing dependency on Tie::Slurp
+
 1.04 Wed 2 Nov 2011
 	- Switch to a production version number (ADAMK)
 	- Updating to Module::Install 1.04 (ADAMK)
-        - Support for vendor directories (CSJEWELL)
+	- Support for vendor directories (CSJEWELL)
 	- Fix some false negative test failures (KMX)
+
 0.03 Mon 9 Feb 2009
 	- Adding quotes around the "%~dp0perl.exe"
 
