@@ -51,6 +51,8 @@ use Object::Tiny qw{
 	perl_lib
 	perl_sitelib
 	perl_vendorlib
+	perl_sitebin
+	perl_vendorbin
 	pl2bat
 	config_pm
 	cpan_config
@@ -94,6 +96,16 @@ sub new {
 	unless ( _DIRECTORY($self->perl_sitelib) ) {
 		Carp::croak("Missing or invalid perl_vendorlib directory");
 	}
+
+	$self->{perl_sitebin} ||= File::Spec->catdir( $self->perl_root, 'site', 'bin' );
+	#unless ( _DIRECTORY($self->perl_sitebin) ) {
+	#	Carp::croak("Missing or invalid perl_sitebin directory");
+	#}
+
+	$self->{perl_vendorbin} ||= File::Spec->catdir( $self->perl_root, 'vendor', 'bin' );
+	#unless ( _DIRECTORY($self->perl_sitebin) ) {
+	#	Carp::croak("Missing or invalid perl_vendorbin directory");
+	#}
 
 	# Find some particular files
 	$self->{pl2bat}          = File::Spec->catfile( $self->perl_bin,       'pl2bat.bat'         );
@@ -234,8 +246,10 @@ sub create_minicpan_conf {
 # Modify existing batch files
 sub modify_batch_files {
 	my $self  = shift;
-	my $dir   = $self->perl_bin;
-	my @files = File::Find::Rule->name('*.bat')->file->in( $dir );
+	my @files;
+	push @files, File::Find::Rule->name('*.bat')->file->in($self->perl_bin);
+	push @files, File::Find::Rule->name('*.bat')->file->in($self->perl_sitebin) if -d $self->perl_sitebin;
+	push @files, File::Find::Rule->name('*.bat')->file->in($self->perl_vendorbin) if -d $self->perl_vendorbin;
 	unless ( @files ) {
 		Carp::croak("Failed to find any batch files");
 	}
