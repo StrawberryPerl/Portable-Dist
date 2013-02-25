@@ -1,6 +1,9 @@
 Changes for Perl extension Portable-Dist
 
-1.05 Mon 7 May 2015
+1.06 XXX 2013
+	- pl2bat & related hack - support for scripts in site/bin + vendoe/bin
+
+1.05 Mon 7 May 2012
 	- removing dependency on Tie::Slurp
 
 1.04 Wed 2 Nov 2011

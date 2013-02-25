@@ -41,7 +41,7 @@ use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
 use constant MSWin32 => ( $^O eq 'MSWin32' );
 
@@ -241,12 +241,12 @@ sub modify_batch_files {
 	}
 
 	# Process the files
-	my $prepend = '"%~dp0perl.exe"';
 	foreach my $file ( @files ) {
 		# Apply the change to the file
 		my $guard = File::IgnoreReadonly->new( $file );
-                my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
-		$content =~ s/\nperl -x/\n${prepend} -x/g;
+		my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
+		$content =~ s/([\r\n])(perl )(-x[^\r\n]*)/$1 . _perl_cmd($3)/sge;
+		$content =~ s/(#line )(\d+)/$1 . ($2+12)/e;  # we have added extra 12 lines
 		write_file($file, {binmode=>':utf8'}, $content);
 	}
 
@@ -256,7 +256,6 @@ sub modify_batch_files {
 sub modify_pl2bat {
 	my $self    = shift;
 	my $file    = $self->pl2bat;
-	my $prepend = '"%~dp0perl.exe"';
 	my $append  = <<'END_PERL';
 eval {
 	require Portable;
@@ -266,22 +265,34 @@ END_PERL
 
 	# Apply the change to the file
 	my $guard   = File::IgnoreReadonly->new( $file );
-        my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
-	$content =~ s/\bperl \$/${prepend} \$/g;
+	my $content = read_file($file,  binmode=>':utf8') or die "Couldn't read $file";
+	$content =~ s/\bperl \$OPT\{'(a|o|n)'\}/_perl_cmd('$OPT{\'' . $1 .'\'}', 1)/esg;
 	write_file($file, {binmode=>':utf8'}, $content);
 
 	return 1;
 }
-
-
-
-
 
 #####################################################################
 # Support Functions
 
 sub _DIRECTORY {
 	(defined _STRING($_[0]) and -d $_[0]) ? $_[0] : undef;
+}
+
+sub _perl_cmd {
+  my ($arg, $tab) = @_;
+  my $rv = <<'MARKER';
+IF EXIST "%~dp0perl.exe" (
+"%~dp0perl.exe" XXX_XXX
+) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
+"%~dp0..\..\bin\perl.exe" XXX_XXX
+) ELSE (
+perl XXX_XXX
+)
+MARKER
+  $rv =~ s/XXX_XXX/$arg/sg;
+  $rv =~ s/([\r\n]+)/$1\t/sg if $tab;
+  return $rv;
 }
 
 1;
