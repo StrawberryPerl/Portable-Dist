@@ -224,7 +224,7 @@ sub create_minicpan_conf {
 	File::Path::mkpath( $dir, { verbose => 0 } );
 
 	# Write the file
-	my $guard   = File::IgnoreReadonly->new( $file );
+	my $guard = -f $file ? File::IgnoreReadonly->new( $file ) : 0;
 	write_file(
 		$file,
 		"class: CPAN::Mini::Portable\n",
