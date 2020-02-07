@@ -309,21 +309,13 @@ MARKER
 
 =pod
 
-=head1 SUPPORT
-
-Bugs should be reported via the CPAN bug tracker.
-
-L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Portable-Dist>
-
-For other issues, or commercial support, contact the author.
-
 =head1 AUTHOR
 
 Adam Kennedy E<lt>adamk@cpan.orgE<gt>
 
 =head1 SEE ALSO
 
-L<Portable>, L<http://win32.perl.org/>, L<http://strawberryperl.com/>
+L<Portable>, L<http://strawberryperl.com/>
 
 =head1 COPYRIGHT
 
