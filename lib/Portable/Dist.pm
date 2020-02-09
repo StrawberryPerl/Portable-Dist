@@ -41,7 +41,7 @@ use File::Find::Rule     ();
 use File::IgnoreReadonly ();
 use Params::Util         '_STRING'; 
 
-our $VERSION = '1.08';
+our $VERSION = '1.09';
 
 use constant MSWin32 => ( $^O eq 'MSWin32' );
 
